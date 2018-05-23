@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#3F51B5</color>
+    <color name="colorPrimaryDark">#303F9F</color>
+    <color name="colorAccent">#FF4081</color>
+
+    <color name="black">#000000</color>
+    <color name="white">#FFFFFF</color>
+
+    <color name="red">#FF0000</color>
+    <color name="orange">#FF8000</color>
+    <color name="yellow">#FFFF00</color>
+    <color name="green">#00FF00</color>
+    <color name="blue">#0000FF</color>
+    <color name="purple">#8000FF</color>
+
+    <color name="darkRed">#880000</color>
+    <color name="darkOrange">#884000</color>
+    <color name="darkYellow">#888800</color>
+    <color name="darkGreen">#008800</color>
+    <color name="darkBlue">#000088</color>
+    <color name="darkPurple">#400088</color>
+
+    <!-- Primary color for the editor -->
+    <color name="editorColorPrimary">#2D3640</color>
+
+    <!-- Primary dark color for the editor -->
+    <color name="editorColorPrimaryDark">#394450</color>
+</resources>
