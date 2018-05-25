@@ -11,7 +11,7 @@ import android.support.design.widget.FloatingActionButton;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.TextView;
+import android.widget.ListView;
 import android.widget.Toast;
 
 import com.example.nicole.test.Data.Contract;
@@ -47,51 +47,18 @@ public class Stuff extends AppCompatActivity {
 
     private void displayDatabase()
     {
+        String[] projection = {Contract.ID_COLUMN, Contract.COLUMN_NAME, Contract.COLUMN_AGE,
+                Contract.COLUMN_CITY, Contract.COLUMN_GENDER};
 
         Cursor c = getContentResolver().query(Contract.CONTENT_URI, null, null, null, null);
 
-        TextView text = (TextView) findViewById(R.id.text_view_stuff);
-        text.setText("");
+        ListView listView = (ListView)findViewById(R.id.text_view_stuff);
 
-        int columnIndexId = c.getColumnIndex(Contract.ID_COLUMN);
-        int columnIndexName = c.getColumnIndex(Contract.COLUMN_NAME);
-        int columnIndexAge = c.getColumnIndex(Contract.COLUMN_AGE);
-        int columnIndexCity = c.getColumnIndex(Contract.COLUMN_CITY);
-        int columnIndexGender = c.getColumnIndex(Contract.COLUMN_GENDER);
+        StuffAdapter adapter = new StuffAdapter(this, c);
 
-        try {
-            while (c.moveToNext()) {
-                int currId = c.getInt(columnIndexId);
-                String currName = c.getString(columnIndexName);
-                int currAge = c.getInt(columnIndexAge);
-                String currCity = c.getString(columnIndexCity);
-                int currGender = c.getInt(columnIndexGender);
+        listView.setAdapter(adapter);
 
-                String gender;
-
-                if (currGender == 0)
-                {
-                    gender = "Unknown";
-                }
-                else if(currGender == 1)
-                {
-                    gender = "Male";
-                }
-                else
-                {
-                    gender = "Female";
-                }
-
-                text.append(currId + " - "
-                        + currName + " - "
-                        + currAge + " - "
-                        + currCity + " - "
-                        + gender + "\n");
-            }
-        }
-        finally {
-            c.close();
-        }
+        c.close();
     }
 
     private void insertStuff() {

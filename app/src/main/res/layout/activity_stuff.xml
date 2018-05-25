@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     tools:context="com.example.nicole.test.Stuff">
 
-    <TextView
+    <ListView
         android:id="@+id/text_view_stuff"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
