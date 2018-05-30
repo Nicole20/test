@@ -1,8 +1,10 @@
 package com.example.nicole.test;
 
+import android.app.LoaderManager;
 import android.content.ContentValues;
+import android.content.CursorLoader;
+import android.content.Loader;
 import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -15,11 +17,12 @@ import android.widget.ListView;
 import android.widget.Toast;
 
 import com.example.nicole.test.Data.Contract;
-import com.example.nicole.test.Data.dbHelper;
 
-public class Stuff extends AppCompatActivity {
+public class Stuff extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
 
-    private dbHelper dbStuff;
+    public static final int LOADER = 0;
+
+    StuffAdapter cursorAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -37,39 +40,19 @@ public class Stuff extends AppCompatActivity {
         });
 
         // Find the ListView which will be populated with the pet data
-        ListView petListView = (ListView) findViewById(R.id.text_view_stuff);
+        ListView listView = (ListView) findViewById(R.id.text_view_stuff);
 
         // Find and set empty view on the ListView, so that it only shows when the list has 0 items.
         View emptyView = findViewById(R.id.empty_view);
-        petListView.setEmptyView(emptyView);
+        listView.setEmptyView(emptyView);
 
-        dbStuff = new dbHelper(this);
-    }
+        cursorAdapter = new StuffAdapter(this, null);
+        listView.setAdapter(cursorAdapter);
 
-    @Override
-    protected void onStart() {
-        super.onStart();
-        displayDatabase();
-    }
-
-    private void displayDatabase()
-    {
-        String[] projection = {Contract.ID_COLUMN, Contract.COLUMN_NAME, Contract.COLUMN_AGE,
-                Contract.COLUMN_CITY, Contract.COLUMN_GENDER};
-
-        Cursor c = getContentResolver().query(Contract.CONTENT_URI, null, null, null, null);
-
-        ListView listView = (ListView)findViewById(R.id.text_view_stuff);
-
-        StuffAdapter adapter = new StuffAdapter(this, c);
-
-        listView.setAdapter(adapter);
-
-        c.close();
+        getLoaderManager().initLoader(LOADER, null, this);
     }
 
     private void insertStuff() {
-        SQLiteDatabase db = dbStuff.getWritableDatabase();
 
         ContentValues values = new ContentValues();
 
@@ -96,7 +79,6 @@ public class Stuff extends AppCompatActivity {
             // Respond to a click on the "Insert dummy data" menu option
             case R.id.action_insert_dummy_data:
                 insertStuff();
-                displayDatabase();
                 Toast toast = Toast.makeText(this, "Saved", Toast.LENGTH_SHORT);
                 toast.show();
                 return true;
@@ -106,5 +88,34 @@ public class Stuff extends AppCompatActivity {
                 return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public Loader<Cursor> onCreateLoader(int id, Bundle args) {
+
+        String[] projection = {Contract.ID_COLUMN, Contract.COLUMN_NAME, Contract.COLUMN_CITY};
+
+        switch (id) {
+            case LOADER:
+                return new CursorLoader(
+                        this,
+                        Contract.CONTENT_URI,
+                        projection,
+                        null,
+                        null,
+                        null);
+            default:
+                return null;
+        }
+    }
+
+    @Override
+    public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+        cursorAdapter.swapCursor(data);
+    }
+
+    @Override
+    public void onLoaderReset(Loader<Cursor> loader) {
+        cursorAdapter.swapCursor(null);
     }
 }
