@@ -57,6 +57,8 @@ public class provider extends ContentProvider{
                 throw new IllegalArgumentException("Cannot query unknown URI: " + uri);
         }
 
+        cursor.setNotificationUri(getContext().getContentResolver(), uri);
+
         return cursor;
     }
 
@@ -100,6 +102,8 @@ public class provider extends ContentProvider{
             return null;
         }
 
+        getContext().getContentResolver().notifyChange(uri, null);
+
         // Once we know the ID of the new row in the table,
         // return the new URI with the ID appended to the end of it
         return ContentUris.withAppendedId(uri, id);
@@ -114,10 +118,12 @@ public class provider extends ContentProvider{
         switch (match){
             // Delete whole table
             case STUFF:
+                getContext().getContentResolver().notifyChange(uri, null);
                 return database.delete(Contract.TABLE_NAME, selection, selectionArgs);
             case STUFF_ID:
                 selection = Contract._ID + "=?";
                 selectionArgs = new String[] { String.valueOf(ContentUris.parseId(uri)) };
+                getContext().getContentResolver().notifyChange(uri, null);
                 return database.delete(Contract.TABLE_NAME, selection, selectionArgs);
             default:
                 throw new IllegalArgumentException("Deletion is not supported for " + uri);
@@ -171,6 +177,8 @@ public class provider extends ContentProvider{
 
         // Otherwise, get writable database to update the data
         SQLiteDatabase database = someHelper.getWritableDatabase();
+
+        getContext().getContentResolver().notifyChange(uri, null);
 
         // Returns the number of database rows affected by the update statement
         return database.update(Contract.TABLE_NAME, values, selection, selectionArgs);
