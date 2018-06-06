@@ -1,6 +1,7 @@
 package com.example.nicole.test;
 
 import android.content.ContentValues;
+import android.content.Intent;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.support.v7.app.AppCompatActivity;
@@ -44,6 +45,18 @@ public class Editor extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_editor);
+
+        Intent i = getIntent();
+        Uri currUri = i.getData();
+
+        if(currUri == null)
+        {
+            setTitle(R.string.add_new);
+        }
+        else
+        {
+            setTitle(R.string.edit_this);
+        }
 
         // Find all relevant views that we will need to read user input from
         mNameEditText = (EditText) findViewById(R.id.edit_name);

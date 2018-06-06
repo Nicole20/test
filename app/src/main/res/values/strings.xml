@@ -52,7 +52,7 @@
     <string name="gender_female">Female</string>
 
     <!-- Toast message in editor when new pet has been successfully inserted [CHAR LIMIT=NONE] -->
-    <string name="editor_insert_pet_successful">Pet saved</string>
+    <string name="editor_insert_pet_successful">Saved</string>
 
     <!-- Toast message in editor when new pet has failed to be inserted [CHAR LIMIT=NONE] -->
     <string name="editor_insert_pet_failed">Error with saving pet</string>
@@ -62,5 +62,11 @@
 
     <!-- Subtitle text for the empty view that prompts the user to add a pet [CHAR LIMIT=50] -->
     <string name="empty_view_subtitle_text">Get started by adding a pet</string>
+
+    <!-- Title text for adding new entry -->
+    <string name="add_new">Add</string>
+
+    <!-- Title text for editing entry -->
+    <string name="edit_this">Edit</string>
 
 </resources>

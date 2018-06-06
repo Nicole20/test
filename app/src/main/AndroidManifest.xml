@@ -25,7 +25,8 @@
         <activity
             android:name=".Music"
             android:label="Music" />
-        <activity android:name=".Stuff" />
+        <activity android:name=".Stuff"
+            android:label="Stuff" />
         <activity android:name=".Editor"/>
         <provider
             android:authorities="com.example.nicole.test"

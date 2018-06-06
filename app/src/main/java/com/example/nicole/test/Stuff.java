@@ -1,6 +1,7 @@
 package com.example.nicole.test;
 
 import android.app.LoaderManager;
+import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.CursorLoader;
 import android.content.Loader;
@@ -13,6 +14,7 @@ import android.support.design.widget.FloatingActionButton;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ListView;
 import android.widget.Toast;
 
@@ -35,6 +37,7 @@ public class Stuff extends AppCompatActivity implements LoaderManager.LoaderCall
             @Override
             public void onClick(View view) {
                 Intent intent = new Intent(Stuff.this, Editor.class);
+
                 startActivity(intent);
             }
         });
@@ -48,6 +51,18 @@ public class Stuff extends AppCompatActivity implements LoaderManager.LoaderCall
 
         cursorAdapter = new StuffAdapter(this, null);
         listView.setAdapter(cursorAdapter);
+
+        // Setup item click listener
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                Intent i = new Intent(Stuff.this, Editor.class);
+
+                Uri currUri = ContentUris.withAppendedId(Contract.CONTENT_URI, id);
+                i.setData(currUri);
+                startActivity(i);
+            }
+        });
 
         getLoaderManager().initLoader(LOADER, null, this);
     }
@@ -84,7 +99,7 @@ public class Stuff extends AppCompatActivity implements LoaderManager.LoaderCall
                 return true;
             // Respond to a click on the "Delete all entries" menu option
             case R.id.action_delete_all_entries:
-                // Do nothing for now
+                getContentResolver().delete(Contract.CONTENT_URI, null, null);
                 return true;
         }
         return super.onOptionsItemSelected(item);
