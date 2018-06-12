@@ -1,7 +1,11 @@
 package com.example.nicole.test;
 
+import android.app.LoaderManager;
 import android.content.ContentValues;
+import android.content.CursorLoader;
 import android.content.Intent;
+import android.content.Loader;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.support.v7.app.AppCompatActivity;
@@ -20,7 +24,7 @@ import android.widget.Toast;
 import com.example.nicole.test.Data.Contract;
 import com.example.nicole.test.Data.dbHelper;
 
-public class Editor extends AppCompatActivity {
+public class Editor extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
     /** EditText field to enter the name */
     private EditText mNameEditText;
 
@@ -41,6 +45,8 @@ public class Editor extends AppCompatActivity {
 
     private dbHelper dbStuff;
 
+    private Uri mCurrentUri;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -52,10 +58,12 @@ public class Editor extends AppCompatActivity {
         if(currUri == null)
         {
             setTitle(R.string.add_new);
+            mCurrentUri = Contract.CONTENT_URI;
         }
         else
         {
             setTitle(R.string.edit_this);
+            mCurrentUri = currUri;
         }
 
         // Find all relevant views that we will need to read user input from
@@ -67,6 +75,8 @@ public class Editor extends AppCompatActivity {
         setupSpinner();
 
         dbStuff = new dbHelper(this);
+
+        getLoaderManager().initLoader(Stuff.LOADER, null, this);
     }
 
     private void setupSpinner() {
@@ -105,7 +115,8 @@ public class Editor extends AppCompatActivity {
         });
     }
 
-    private void insertStuff() {
+    private void saveStuff() {
+        Uri uri;
         String name = mNameEditText.getText().toString().trim();
         String city = mCityEditText.getText().toString().trim();
         Integer age = Integer.parseInt(mAgeEditText.getText().toString().trim());
@@ -118,17 +129,35 @@ public class Editor extends AppCompatActivity {
         values.put(Contract.COLUMN_CITY, city);
         values.put(Contract.COLUMN_GENDER, mGender);
 
-        Uri uri = getContentResolver().insert(Contract.CONTENT_URI, values);
+        if(mCurrentUri == Contract.CONTENT_URI)
+        {
+            uri = getContentResolver().insert(mCurrentUri, values);
 
-        // Show a toast message depending on whether or not the insertion was successful
-        if (uri == null) {
-            // If the new content URI is null, then there was an error with insertion.
-            Toast.makeText(this, getString(R.string.editor_insert_pet_failed),
-                    Toast.LENGTH_SHORT).show();
-        } else {
-            // Otherwise, the insertion was successful and we can display a toast.
-            Toast.makeText(this, getString(R.string.editor_insert_pet_successful),
-                    Toast.LENGTH_SHORT).show();
+            // Show a toast message depending on whether or not the insertion was successful
+            if (uri == null) {
+                // If the new content URI is null, then there was an error with insertion.
+                Toast.makeText(this, getString(R.string.editor_save_failed),
+                        Toast.LENGTH_SHORT).show();
+            } else {
+                // Otherwise, the insertion was successful and we can display a toast.
+                Toast.makeText(this, getString(R.string.editor_save_successful),
+                        Toast.LENGTH_SHORT).show();
+            }
+        }
+        else
+        {
+            int rowsAffected = getContentResolver().update(mCurrentUri, values, null, null);
+
+            // Show a toast message depending on whether or not the update was successful.
+            if (rowsAffected == 0) {
+                // If no rows were affected, then there was an error with the update.
+                Toast.makeText(this, getString(R.string.editor_save_failed),
+                        Toast.LENGTH_SHORT).show();
+            } else {
+                // Otherwise, the update was successful and we can display a toast.
+                Toast.makeText(this, getString(R.string.editor_save_successful),
+                        Toast.LENGTH_SHORT).show();
+            }
         }
     }
 
@@ -146,7 +175,7 @@ public class Editor extends AppCompatActivity {
         switch (item.getItemId()) {
             // Respond to a click on the "Save" menu option
             case R.id.action_save:
-                insertStuff();
+                saveStuff();
                 // Exit activity
                 finish();
                 return true;
@@ -161,5 +190,49 @@ public class Editor extends AppCompatActivity {
                 return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public Loader<Cursor> onCreateLoader(int id, Bundle args) {
+        // Since the editor shows all info, define a projection that contains
+        // all columns from the table
+        String[] projection = {Contract.ID_COLUMN, Contract.COLUMN_NAME, Contract.COLUMN_CITY, Contract.COLUMN_AGE, Contract.COLUMN_GENDER};
+
+        return new CursorLoader(
+                this,
+                mCurrentUri,
+                projection,
+                null,
+                null,
+                null);
+    }
+
+    @Override
+    public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+        if(data.moveToFirst())
+        {
+            // Find the columns that we're interested in
+            int nameColumnIndex = data.getColumnIndex(Contract.COLUMN_NAME);
+            int cityColumnIndex = data.getColumnIndex(Contract.COLUMN_CITY);
+            int genderColumnIndex = data.getColumnIndex(Contract.COLUMN_GENDER);
+            int ageColumnIndex = data.getColumnIndex(Contract.COLUMN_AGE);
+
+            // Extract out the value from the Cursor for the given column index
+            String name = data.getString(nameColumnIndex);
+            String city = data.getString(cityColumnIndex);
+            int gender = data.getInt(genderColumnIndex);
+            int age = data.getInt(ageColumnIndex);
+
+            // Update the views on the screen with the values from the database
+            mNameEditText.setText(name);
+            mCityEditText.setText(city);
+            mAgeEditText.setText(Integer.toString(age));
+            mGenderSpinner.setSelection(gender);
+        }
+    }
+
+    @Override
+    public void onLoaderReset(Loader<Cursor> loader) {
+
     }
 }
