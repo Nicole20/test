@@ -38,7 +38,6 @@ public final class Contract implements BaseColumns{
 
     public static boolean isValidGender(int gender)
     {
-
-        return (gender != UNKNOWN && gender != MALE && gender != FEMALE);
+        return (gender == UNKNOWN || gender == MALE || gender == FEMALE);
     }
 }
