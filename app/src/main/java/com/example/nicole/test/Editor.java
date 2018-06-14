@@ -1,12 +1,13 @@
 package com.example.nicole.test;
 
+import android.app.AlertDialog;
 import android.app.LoaderManager;
 import android.content.ContentValues;
 import android.content.CursorLoader;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.Loader;
 import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -14,6 +15,7 @@ import android.support.v4.app.NavUtils;
 import android.text.TextUtils;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -43,9 +45,9 @@ public class Editor extends AppCompatActivity implements LoaderManager.LoaderCal
      */
     private int mGender = 0;
 
-    private dbHelper dbStuff;
+    private Uri mCurrentUri = null;
 
-    private Uri mCurrentUri;
+    private boolean mStuffHasChanged = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,17 +55,23 @@ public class Editor extends AppCompatActivity implements LoaderManager.LoaderCal
         setContentView(R.layout.activity_editor);
 
         Intent i = getIntent();
-        Uri currUri = i.getData();
+        mCurrentUri = i.getData();
 
-        if(currUri == null)
+        if(mCurrentUri == null)
         {
             setTitle(R.string.add_new);
-            mCurrentUri = Contract.CONTENT_URI;
+
+            // Invalidate the options menu, so the "Delete" menu option can be hidden.
+            // (It doesn't make sense to delete something that hasn't been created yet.)
+            invalidateOptionsMenu();
         }
         else
         {
             setTitle(R.string.edit_this);
-            mCurrentUri = currUri;
+
+            // Initialize a loader to read the data from the database
+            // and display the current values in the editor
+            getLoaderManager().initLoader(Stuff.LOADER, null, this);
         }
 
         // Find all relevant views that we will need to read user input from
@@ -72,11 +80,12 @@ public class Editor extends AppCompatActivity implements LoaderManager.LoaderCal
         mAgeEditText = (EditText) findViewById(R.id.edit_age);
         mGenderSpinner = (Spinner) findViewById(R.id.spinner_gender);
 
+        mNameEditText.setOnTouchListener(mTouchListener);
+        mCityEditText.setOnTouchListener(mTouchListener);
+        mAgeEditText.setOnTouchListener(mTouchListener);
+        mGenderSpinner.setOnTouchListener(mTouchListener);
+
         setupSpinner();
-
-        dbStuff = new dbHelper(this);
-
-        getLoaderManager().initLoader(Stuff.LOADER, null, this);
     }
 
     private void setupSpinner() {
@@ -121,17 +130,15 @@ public class Editor extends AppCompatActivity implements LoaderManager.LoaderCal
         String city = mCityEditText.getText().toString().trim();
         Integer age = Integer.parseInt(mAgeEditText.getText().toString().trim());
 
-        SQLiteDatabase db = dbStuff.getWritableDatabase();
-
         ContentValues values = new ContentValues();
         values.put(Contract.COLUMN_NAME, name);
         values.put(Contract.COLUMN_AGE, age);
         values.put(Contract.COLUMN_CITY, city);
         values.put(Contract.COLUMN_GENDER, mGender);
 
-        if(mCurrentUri == Contract.CONTENT_URI)
+        if(mCurrentUri == null)
         {
-            uri = getContentResolver().insert(mCurrentUri, values);
+            uri = getContentResolver().insert(Contract.CONTENT_URI, values);
 
             // Show a toast message depending on whether or not the insertion was successful
             if (uri == null) {
@@ -181,12 +188,32 @@ public class Editor extends AppCompatActivity implements LoaderManager.LoaderCal
                 return true;
             // Respond to a click on the "Delete" menu option
             case R.id.action_delete:
-                // Do nothing for now
+                getContentResolver().delete(mCurrentUri, null, null);
+                finish();
                 return true;
             // Respond to a click on the "Up" arrow button in the app bar
             case android.R.id.home:
-                // Navigate back to parent activity (CatalogActivity)
-                NavUtils.navigateUpFromSameTask(this);
+                // If the stuff hasn't changed, continue with navigating up to parent activity
+                // which is the {@link Stuff}.
+                if (!mStuffHasChanged) {
+                    NavUtils.navigateUpFromSameTask(Editor.this);
+                    return true;
+                }
+
+                // Otherwise if there are unsaved changes, setup a dialog to warn the user.
+                // Create a click listener to handle the user confirming that
+                // changes should be discarded.
+                DialogInterface.OnClickListener discardButtonClickListener =
+                        new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int i) {
+                                // User clicked "Discard" button, navigate to parent activity.
+                                NavUtils.navigateUpFromSameTask(Editor.this);
+                            }
+                        };
+
+                // Show a dialog that notifies the user they have unsaved changes
+                showUnsavedChangesDialog(discardButtonClickListener);
                 return true;
         }
         return super.onOptionsItemSelected(item);
@@ -209,6 +236,11 @@ public class Editor extends AppCompatActivity implements LoaderManager.LoaderCal
 
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+        // Bail early if the cursor is null or there is less than 1 row in the cursor
+        if (data == null || data.getCount() < 1) {
+            return;
+        }
+
         if(data.moveToFirst())
         {
             // Find the columns that we're interested in
@@ -233,6 +265,75 @@ public class Editor extends AppCompatActivity implements LoaderManager.LoaderCal
 
     @Override
     public void onLoaderReset(Loader<Cursor> loader) {
+        // If the loader is invalidated, clear out all the data from the input fields.
+        mNameEditText.setText("");
+        mCityEditText.setText("");
+        mAgeEditText.setText("");
+        mGenderSpinner.setSelection(0); // Select "Unknown" gender
+    }
 
+    @Override
+    public boolean onPrepareOptionsMenu(Menu menu) {
+        super.onPrepareOptionsMenu(menu);
+        // If this new, hide the "Delete" menu item.
+        if (mCurrentUri == null) {
+            MenuItem menuItem = menu.findItem(R.id.action_delete);
+            menuItem.setVisible(false);
+        }
+        return true;
+    }
+
+    // OnTouchListener that listens for any user touches on a View, implying that they are modifying
+    // the view, and we change the mStuffHasChanged boolean to true.
+    private View.OnTouchListener mTouchListener = new View.OnTouchListener() {
+        @Override
+        public boolean onTouch(View view, MotionEvent motionEvent) {
+            mStuffHasChanged = true;
+            return false;
+        }
+    };
+
+    @Override
+    public void onBackPressed() {
+        // If the stuff hasn't changed, continue with handling back button press
+        if (!mStuffHasChanged) {
+            super.onBackPressed();
+            return;
+        }
+
+        // Otherwise if there are unsaved changes, setup a dialog to warn the user.
+        // Create a click listener to handle the user confirming that changes should be discarded.
+        DialogInterface.OnClickListener discardButtonClickListener =
+                new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        // User clicked "Discard" button, close the current activity.
+                        finish();
+                    }
+                };
+
+        // Show dialog that there are unsaved changes
+        showUnsavedChangesDialog(discardButtonClickListener);
+    }
+
+    private void showUnsavedChangesDialog(DialogInterface.OnClickListener discardButtonClickListener) {
+        // Create an AlertDialog.Builder and set the message, and click listeners
+        // for the positive and negative buttons on the dialog.
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setMessage(R.string.unsaved_changes_dialog_msg);
+        builder.setPositiveButton(R.string.discard, discardButtonClickListener);
+        builder.setNegativeButton(R.string.keep_editing, new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                // User clicked the "Keep editing" button, so dismiss the dialog
+                // and continue editing the pet.
+                if (dialog != null) {
+                    dialog.dismiss();
+                }
+            }
+        });
+
+        // Create and show the AlertDialog
+        AlertDialog alertDialog = builder.create();
+        alertDialog.show();
     }
 }
